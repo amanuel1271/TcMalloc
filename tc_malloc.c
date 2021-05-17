@@ -8,11 +8,8 @@
 #include "tc_malloc.h"
 
 SPAN* central_page_heap[PAGEHEAPSIZE] = {0}; // make the central page heap global so that every function can access it
-
 pthread_spinlock_t central_lock; //global variables
-
 pthread_spinlock_t heap_lock; //global variables
-
 pthread_spinlock_t central_array_lock;
 
 
@@ -20,17 +17,13 @@ __thread FREELIST thread_cache[159] = {0}; // 159 ALLOCATABLE SIZE CLASSES
 
 
 void* central_array[100] = {0}; //everytime you request 256 pages of memory initialize a span to id map array and save the pointer here
-
 SPAN* central_free_list[159] = {0}; // there are 159 allocatable size classes
 
 
 
 void *tc_central_init();
-
 void *tc_thread_init();
-
 void *tc_malloc(size_t size);
-
 void tc_free(void *ptr);
 
 
@@ -39,16 +32,11 @@ void tc_free(void *ptr);
 ////////////////////////
 void *tc_central_init(){
 
-    for (int j = 0;j < PAGEHEAPSIZE;j++){
-
+    for (int j = 0;j < PAGEHEAPSIZE;j++)
         central_page_heap[j] = NULL;
 
-    }
-
     pthread_spin_init(&central_lock,1);
-
     pthread_spin_init(&heap_lock,1);
-
     pthread_spin_init(&central_array_lock,1);
 
 
@@ -65,31 +53,25 @@ SPAN* span_pop(SPAN** begin){
     if (*begin == NULL){
 
         fprintf(stderr,"usage: pop a non NULL pointer");
-
         return NULL;
     }
     
     SPAN* next = (*begin)->next;
-
     SPAN* cur = *begin;
     
     if (next){
 
         next->prev = cur->prev;
-
         *begin = next;
 
         cur->next = NULL;
-
         cur->prev = NULL;
 
         return cur;
     }
 
     *begin = NULL;
-
     cur->next = NULL;
-
     cur->prev = NULL;
 
     return cur;
@@ -100,7 +82,6 @@ void span_push(SPAN** span_ptr_index,SPAN* new_span){
     if (new_span == NULL){
 
         fprintf(stderr,"usage: push a non NULL pointer");
-
         return;
     }
 
@@ -108,23 +89,18 @@ void span_push(SPAN** span_ptr_index,SPAN* new_span){
     if (*span_ptr_index == NULL){
 
         *span_ptr_index = new_span;
-
         new_span->next = NULL;
-
         new_span->prev = NULL;
 
         return;
     }
     SPAN* next = *span_ptr_index;
-
     SPAN* prev = next->prev;
 
     *span_ptr_index = new_span;
 
     new_span->next = next;
-
     next->prev = new_span;
-
     new_span->prev = prev;
 
     return;
@@ -139,22 +115,18 @@ void map_id_span(size_t num_of_pages,SPAN* span_ptr,size_t starting_id){
 
     for(int j = 0; j < 100;j++){
 
-       if (central_array[j] == NULL){
-
+       if (central_array[j] == NULL)
             break;
-
-        }
+        
         find = (span_to_id_map*)central_array[j];
 
         if ((find->page_id <= starting_id) && (starting_id <= (find->page_id+ MAXPAGE - 1))){
 
             find = find + (starting_id - find->page_id);
-
-            for(int k = 0;k < num_of_pages;k++){
-
+            
+            for(int k = 0;k < num_of_pages;k++)
                 (find + k)->span_of_page_id = span_ptr;
 
-            }
             return;
 
         }
@@ -168,7 +140,6 @@ SPAN* lookup(size_t page_id){
     for(int j = 0; j < 100;j++){
 
         if (central_array[j] == NULL){
-
             break;
 
         }
@@ -177,7 +148,6 @@ SPAN* lookup(size_t page_id){
         if ( (find->page_id <= page_id) && (page_id <= (find->page_id+ MAXPAGE - 1)) ){
 
             // mapping is here
-
             return (find + (page_id - find->page_id))->span_of_page_id;
 
         }
@@ -190,7 +160,6 @@ SPAN* lookup(size_t page_id){
 size_t calculate_pageid(void *ptr){
 
     uintptr_t number = (uintptr_t)ptr;
-
     return (size_t)number/PAGESIZE;
 }
 
@@ -198,7 +167,6 @@ SPAN* give_span_to_central_cache_or_fetch_from_system(size_t num_of_pages){
 
     //check whether the cntral heap ath the requested index has a span
     SPAN* old_span;
-
     void *ptr;
 
     
@@ -207,10 +175,6 @@ SPAN* give_span_to_central_cache_or_fetch_from_system(size_t num_of_pages){
 
 
         SPAN* x = span_pop(&(central_page_heap[num_of_pages-1]));
-        
-       
-
-
         return x;
     }
 
@@ -219,24 +183,17 @@ SPAN* give_span_to_central_cache_or_fetch_from_system(size_t num_of_pages){
         if (central_page_heap[i] != NULL){
 
             old_span = span_pop(&(central_page_heap[i]));
-
             ptr = sbrk(sizeof(SPAN));
 
             if (ptr == (void*)-1){
 
                 fprintf(stderr,"The system couldn't allocate memory\n");
-
-             
-
                 return NULL;
             }
 
             SPAN* new_span = (SPAN *)ptr;
-
             new_span->page_id = old_span->page_id - num_of_pages + old_span->page_size;
-
             new_span->page_size = num_of_pages;
-
             old_span->page_size = old_span->page_size - num_of_pages;
 
             char* ptr20 = (char *)old_span->obj_ptr;
@@ -245,21 +202,13 @@ SPAN* give_span_to_central_cache_or_fetch_from_system(size_t num_of_pages){
 
 
             new_span->next = NULL;
-
             new_span->prev = NULL;
-
             new_span->size_of_objects = 0;
 
 
 
             span_push(&(central_page_heap[old_span->page_size-1]),old_span);
-        
-
             map_id_span(new_span->page_size,new_span,new_span->page_id);
-
-
- 
-
 
             return new_span;
 
@@ -268,25 +217,17 @@ SPAN* give_span_to_central_cache_or_fetch_from_system(size_t num_of_pages){
 
         void *ptr2 = sbrk(MAXBLOCK);
 
-
         if (ptr2 == (void*)-1){
 
             fprintf(stderr,"The system couldn't allocate memory\n");
-
             fflush(stdout);
-
-
             return NULL;
 
         }
 
         void * pp = sbrk(sizeof(SPAN));
-
         SPAN* another_span = (SPAN*)pp;
-
         another_span->page_id = calculate_pageid(ptr2);
-
-
         another_span->page_size = MAXPAGE;
 
         void *ptr4;
@@ -298,9 +239,7 @@ SPAN* give_span_to_central_cache_or_fetch_from_system(size_t num_of_pages){
              if (central_array[j] == NULL){
 
                  ptr4 = sbrk(MAXPAGE * sizeof(span_to_id_map));
-
                  span_to_id_map* find = (span_to_id_map*)ptr4;
-
                  central_array[j] = ptr4;
 
                  for (int k = 0; k < MAXPAGE;k++){
@@ -314,9 +253,7 @@ SPAN* give_span_to_central_cache_or_fetch_from_system(size_t num_of_pages){
         }
 
          SPAN* large_span;
-
          void* ptr3;
-
          char* an_ptr = (char *)ptr2;
 
          for (int k = 0;  k < 512;  k++){
@@ -338,15 +275,11 @@ SPAN* give_span_to_central_cache_or_fetch_from_system(size_t num_of_pages){
 
 
                 large_span->page_id = another_span->page_id + (k * 256);
-
                 large_span->page_size = PAGEHEAPSIZE;
-
                 large_span->size_of_objects = 0;
-
                 large_span->obj_ptr = (void *)(an_ptr + (k * 256 * PAGESIZE));
 
                 span_push(&(central_page_heap[PAGEHEAPSIZE -1]),large_span);
-
                 map_id_span(large_span->page_size,large_span,large_span->page_id);
 
         }

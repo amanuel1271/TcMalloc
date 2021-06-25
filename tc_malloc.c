@@ -28,30 +28,23 @@ void tc_free(void *ptr);
 
 
 
-
-////////////////////////
 void *tc_central_init(){
-
     for (int j = 0;j < PAGEHEAPSIZE;j++)
         central_page_heap[j] = NULL;
-
+    
     pthread_spin_init(&central_lock,1);
     pthread_spin_init(&heap_lock,1);
     pthread_spin_init(&central_array_lock,1);
-
-
     return (void *)central_page_heap;
 }
-/////////////////////////
+
 
 
 
 SPAN* span_pop(SPAN** begin){
-
+    
     assert(begin);
-
     if (*begin == NULL){
-
         fprintf(stderr,"usage: pop a non NULL pointer");
         return NULL;
     }
@@ -63,46 +56,38 @@ SPAN* span_pop(SPAN** begin){
 
         next->prev = cur->prev;
         *begin = next;
-
         cur->next = NULL;
         cur->prev = NULL;
-
         return cur;
     }
 
     *begin = NULL;
     cur->next = NULL;
     cur->prev = NULL;
-
     return cur;
 }
 
 void span_push(SPAN** span_ptr_index,SPAN* new_span){
 
     if (new_span == NULL){
-
         fprintf(stderr,"usage: push a non NULL pointer");
         return;
     }
-
-
+    
     if (*span_ptr_index == NULL){
-
         *span_ptr_index = new_span;
         new_span->next = NULL;
         new_span->prev = NULL;
-
         return;
     }
+    
     SPAN* next = *span_ptr_index;
     SPAN* prev = next->prev;
-
     *span_ptr_index = new_span;
-
+    
     new_span->next = next;
     next->prev = new_span;
     new_span->prev = prev;
-
     return;
 }
 
@@ -123,7 +108,6 @@ void map_id_span(size_t num_of_pages,SPAN* span_ptr,size_t starting_id){
         if ((find->page_id <= starting_id) && (starting_id <= (find->page_id+ MAXPAGE - 1))){
 
             find = find + (starting_id - find->page_id);
-            
             for(int k = 0;k < num_of_pages;k++)
                 (find + k)->span_of_page_id = span_ptr;
 
@@ -141,17 +125,17 @@ SPAN* lookup(size_t page_id){
 
         if (central_array[j] == NULL){
             break;
-
         }
         find = (span_to_id_map*)central_array[j];
 
-        if ( (find->page_id <= page_id) && (page_id <= (find->page_id+ MAXPAGE - 1)) ){
+        if ( (find->page_id <= page_id) && (page_id <= (find->page_id+ MAXPAGE - 1)) )
             return (find + (page_id - find->page_id))->span_of_page_id;
 
-        }
     }
     return NULL;
 }
+
+
 
 size_t calculate_pageid(void *ptr){
 
@@ -163,7 +147,6 @@ size_t calculate_pageid(void *ptr){
 
 SPAN* give_span_to_central_cache_or_fetch_from_system(size_t num_of_pages){
 
-    //check whether the cntral heap ath the requested index has a span
     SPAN* old_span;
     void *ptr;
 
@@ -192,18 +175,11 @@ SPAN* give_span_to_central_cache_or_fetch_from_system(size_t num_of_pages){
             new_span->page_id = old_span->page_id - num_of_pages + old_span->page_size;
             new_span->page_size = num_of_pages;
             old_span->page_size = old_span->page_size - num_of_pages;
-
             char* ptr20 = (char *)old_span->obj_ptr;
-
             new_span->obj_ptr = (void *)(ptr20 + (old_span->page_size * PAGESIZE)); // This is a risky practice my friend
-
-
             new_span->next = NULL;
             new_span->prev = NULL;
             new_span->size_of_objects = 0;
-
-
-
             span_push(&(central_page_heap[old_span->page_size-1]),old_span);
             map_id_span(new_span->page_size,new_span,new_span->page_id);
 
@@ -215,7 +191,6 @@ SPAN* give_span_to_central_cache_or_fetch_from_system(size_t num_of_pages){
         void *ptr2 = sbrk(MAXBLOCK);
 
         if (ptr2 == (void*)-1){
-
             fprintf(stderr,"The system couldn't allocate memory\n");
             fflush(stdout);
             return NULL;
@@ -226,7 +201,6 @@ SPAN* give_span_to_central_cache_or_fetch_from_system(size_t num_of_pages){
         SPAN* another_span = (SPAN*)pp;
         another_span->page_id = calculate_pageid(ptr2);
         another_span->page_size = MAXPAGE;
-
         void *ptr4;
 
         
@@ -234,16 +208,13 @@ SPAN* give_span_to_central_cache_or_fetch_from_system(size_t num_of_pages){
         for(int j = 0; j < 100;j++){
 
              if (central_array[j] == NULL){
-
                  ptr4 = sbrk(MAXPAGE * sizeof(span_to_id_map));
                  span_to_id_map* find = (span_to_id_map*)ptr4;
                  central_array[j] = ptr4;
 
-                 for (int k = 0; k < MAXPAGE;k++){
-
+                 for (int k = 0; k < MAXPAGE;k++)
                      (find + k)->page_id = another_span->page_id + k;
 
-                 }
 
                  break;
              }
@@ -260,17 +231,12 @@ SPAN* give_span_to_central_cache_or_fetch_from_system(size_t num_of_pages){
                 if (ptr3 == (void*)-1){
 
                     fprintf(stderr,"The system couldn't allocate memory\n");
-
                     fflush(stdout);
-
                     return NULL;
 
                 }
 
-                 large_span = (SPAN *)ptr3;
-
-
-
+                large_span = (SPAN *)ptr3;
                 large_span->page_id = another_span->page_id + (k * 256);
                 large_span->page_size = PAGEHEAPSIZE;
                 large_span->size_of_objects = 0;
@@ -280,9 +246,6 @@ SPAN* give_span_to_central_cache_or_fetch_from_system(size_t num_of_pages){
                 map_id_span(large_span->page_size,large_span,large_span->page_id);
 
         }
-
-
-
         return give_span_to_central_cache_or_fetch_from_system(num_of_pages);
 
 }
@@ -299,7 +262,6 @@ void Free_Span_to_Central_Page_heap(SPAN ** span){
     pthread_spin_unlock(&central_array_lock);
 
     if (prev_span == *span){
-        
         pthread_spin_unlock(&heap_lock);
         return;
     }
@@ -321,7 +283,6 @@ void Free_Span_to_Central_Page_heap(SPAN ** span){
                 if (ptr != NULL){
                     
                     if (prev_span == ptr){ //If the span is the first span
-
                         if (*find)
                             span_pop(find);
                     }
@@ -329,9 +290,8 @@ void Free_Span_to_Central_Page_heap(SPAN ** span){
                     else{
 
                         while(ptr != NULL){
-
                             if (ptr == prev_span){
-                                
+                             
                                 if (ptr->prev->next){
 
                                     span_pop(&(ptr->prev->next));
@@ -386,9 +346,7 @@ void Free_Span_to_Central_Page_heap(SPAN ** span){
                         while(ptr != NULL){
                             
                             if (ptr == next_span){
-
                                 if (ptr->prev->next){
-
                                     span_pop(&(ptr->prev->next));
                                     break;
                                 }
@@ -408,7 +366,7 @@ void Free_Span_to_Central_Page_heap(SPAN ** span){
 
 
 }
-////////////////////////////////////////////// End of page cache layer
+
 
 
 
@@ -425,19 +383,16 @@ size_t index_of_central_free_list(size_t block_size){
     size_t save;
 
     if (block_size <= 64){
-
         save = (64 - (int)block_size)/8;
         return 7 - save;
     }
     
     else if (block_size <= 2048){
-
         save = (2048 - (int)block_size)/64;
         return (30 - save) + 8;
     }
     
     else{
-
         save = (32768 - (int)block_size)/256;
         return (119 - save) + 39;
 
@@ -449,7 +404,7 @@ size_t move_size(size_t size){
 
     if (!size)
         return 1;
-
+    
     int num_elem = (int)(MAXSMALLOBJ/size);
 
     if (num_elem < 3)
@@ -598,8 +553,6 @@ void Release_Obj_to_Span_in_Central_FreeList(void* start,size_t obj_size){
                 }
             }
 
-            //corresponding_span->obj_ptr = NULL;
-
             corresponding_span->size_of_objects = 0;
             corresponding_span->next = NULL;
             corresponding_span->prev = NULL;    
@@ -616,16 +569,12 @@ void Release_Obj_to_Span_in_Central_FreeList(void* start,size_t obj_size){
 }
 
 
-/////////////////// End of central cache
-
-//////////////////////////////////////////////////
-
 void* tc_thread_init(){
     return (void *)*(&thread_cache);
 
 }
 
-///////////////////////////////////////////////////
+
 
 void * fetch_from_central_cache(size_t byte){
 
@@ -661,8 +610,6 @@ void * fetch_from_central_cache(size_t byte){
         freelist->size += fetch_num - 1;
     }
 
-    //printf("Breakpoint 2\n");
-
     if (freelist->threshold == MIN(move_size(bytes),freelist->threshold))
         freelist->threshold += 1;
 
@@ -678,9 +625,6 @@ void* Allocate_from_ThreadCache(size_t size){
     FREELIST* freelist = &thread_cache[index];
 
     void *object = freelist->list;
-
-
-    //printf("RET IS %d\n",ret);
 
     if (freelist->list == NULL){
 
@@ -714,6 +658,8 @@ void free_threadcache_to_central(FREELIST * freelist,size_t byte){
     return;
 }
 
+
+
 void deallocate_to_thread(void* obj,size_t byte){
 
 
@@ -729,7 +675,6 @@ void deallocate_to_thread(void* obj,size_t byte){
         free_threadcache_to_central(freelist,byte);
 
     }
-
     return;
 
 
@@ -741,17 +686,12 @@ void* tc_malloc(size_t size){
     void* obj;
     SPAN* obj2;
     size_t num_of_pages = size/PAGESIZE;
-
-
-    //printf("ret is %d\n",ret);
-
-
-    // If malloc 0 is called return a NULL pointer
+    
     if (size == 0){
         return NULL;
     }
 
-    // It is a small object
+
     if (size <= MAXSMALLOBJ){
 
         obj = Allocate_from_ThreadCache(size);
@@ -759,7 +699,7 @@ void* tc_malloc(size_t size){
 
 
     }
-    //It is a large object
+
     else {
 
 

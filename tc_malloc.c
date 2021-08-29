@@ -48,9 +48,7 @@ SPAN* span_pop(SPAN** begin){
         fprintf(stderr,"usage: pop a non NULL pointer");
         return NULL;
     }
-    
-    SPAN* next = (*begin)->next;
-    SPAN* cur = *begin;
+    SPAN *next,*cur = (*begin)->next,*begin;
     
     if (next){
         next->prev = cur->prev;
@@ -59,7 +57,6 @@ SPAN* span_pop(SPAN** begin){
         cur->prev = NULL;
         return cur;
     }
-    
     *begin = NULL;
     cur->next = NULL;
     cur->prev = NULL;
@@ -133,7 +130,6 @@ SPAN* lookup(size_t page_id){
 
 
 size_t calculate_pageid(void *ptr){
-
     uintptr_t number = (uintptr_t)ptr;
     return (size_t)number/PAGESIZE;
 }
@@ -183,7 +179,6 @@ SPAN* give_span_to_central_cache_or_fetch_from_system(size_t num_of_pages){
             fprintf(stderr,"The system couldn't allocate memory\n");
             fflush(stdout);
             return NULL;
-
         }
     
         void * pp = sbrk(sizeof(SPAN));
@@ -194,9 +189,7 @@ SPAN* give_span_to_central_cache_or_fetch_from_system(size_t num_of_pages){
         void *ptr4;       
     
         for(int j = 0; j < 100;j++){
-            
              if (central_array[j] == NULL){
-                 
                  ptr4 = sbrk(MAXPAGE * sizeof(span_to_id_map));
                  span_to_id_map* find = (span_to_id_map*)ptr4;
                  central_array[j] = ptr4;
@@ -207,7 +200,6 @@ SPAN* give_span_to_central_cache_or_fetch_from_system(size_t num_of_pages){
                  break;
              }
         }
-    
          SPAN* large_span;
          void* ptr3;
          char* an_ptr = (char *)ptr2;
@@ -240,8 +232,7 @@ SPAN* give_span_to_central_cache_or_fetch_from_system(size_t num_of_pages){
 
 
 
-void Free_Span_to_Central_Page_heap(SPAN ** span){
-    // look up the prev page's span   
+void Free_Span_to_Central_Page_heap(SPAN ** span){  
     pthread_spin_lock(&heap_lock);
     size_t comb_page_size;
     pthread_spin_lock(&central_array_lock);
@@ -254,8 +245,7 @@ void Free_Span_to_Central_Page_heap(SPAN ** span){
         return;
     }
     
-    SPAN** find;
-    SPAN *search_for_span,*ptr;
+    SPAN **find, *search_for_span,*ptr;
     
     if (prev_span != NULL && prev_span->size_of_objects == 0 && prev_span->obj_ptr){    
         comb_page_size = prev_span->page_size + (*span)->page_size;

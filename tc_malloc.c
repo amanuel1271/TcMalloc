@@ -244,19 +244,15 @@ void Free_Span_to_Central_Page_heap(SPAN ** span){
             find = central_page_heap + prev_span->page_size -1;
             search_for_span = *find;
             ptr = search_for_span;
-                if (ptr != NULL){                  
-                    if (prev_span == ptr){ //If the span is the first span
-                        if (*find)
-                            span_pop(find);
+            if (ptr != NULL && prev_span == ptr && *find){                  
+                        span_pop(find);
                     }
                     
-                    else{
+            else{
                         while(ptr != NULL){
-                            if (ptr == prev_span){                             
-                               if (ptr->prev->next){
+                            if (ptr == prev_span && ptr->prev->next){                             
                                     span_pop(&(ptr->prev->next));
                                     break;
-                                }
                             }
                             ptr = ptr->next;
                         }
@@ -284,17 +280,14 @@ void Free_Span_to_Central_Page_heap(SPAN ** span){
             ptr = search_for_span;
             
             if (ptr != NULL){                
-                    if (next_span == ptr){ //If the span is the first span                        
-                        if (*find)
+                    if (next_span == ptr && *find){ //If the span is the first span                        
                             span_pop(find);
                     }
                     else{                        
                         while(ptr != NULL){                            
-                            if (ptr == next_span){
-                                if (ptr->prev->next){
+                            if (ptr == next_span && ptr->prev->next){
                                     span_pop(&(ptr->prev->next));
                                     break;
-                                }
                             }
                             ptr = ptr->next;
                         }
